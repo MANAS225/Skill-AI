@@ -13,7 +13,14 @@ export async function updateUser(data) {
     where: { clerkUserId: userId },
   });
 
-  if (!user) throw new Error("User not found");
+  if (!user) {
+  user = await db.user.create({
+    data: {
+      clerkUserId: userId,
+      email: `${userId}@temp.com`,
+    },
+  });
+}
 
   try {
     // Start a transaction to handle both operations
