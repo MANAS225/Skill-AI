@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -30,6 +30,7 @@ export default function ResumeBuilder({ initialContent }) {
   const [previewContent, setPreviewContent] = useState(initialContent);
   const { user } = useUser();
   const [resumeMode, setResumeMode] = useState("preview");
+  const pdfRef = useRef(null);
 
   const {
     control,
@@ -115,7 +116,12 @@ export default function ResumeBuilder({ initialContent }) {
   const generatePDF = async () => {
     setIsGenerating(true);
     try {
-      const element = document.getElementById("resume-pdf");
+      const element = pdfRef.current;
+      if (!element) {
+        toast.error("Resume preview is not ready for PDF export yet.");
+        return;
+      }
+
       const opt = {
         margin: [15, 15],
         filename: "resume.pdf",
@@ -124,9 +130,10 @@ export default function ResumeBuilder({ initialContent }) {
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
 
-      await html2pdf().set(opt).from(element).save();
+      await html2pdf().set(opt).from(element, "element").save();
     } catch (error) {
       console.error("PDF generation error:", error);
+      toast.error("Failed to generate PDF. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -401,19 +408,24 @@ export default function ResumeBuilder({ initialContent }) {
               preview={resumeMode}
             />
           </div>
-          <div className="hidden">
-            <div id="resume-pdf">
-              <MDEditor.Markdown
-                source={previewContent}
-                style={{
-                  background: "white",
-                  color: "black",
-                }}
-              />
-            </div>
-          </div>
         </TabsContent>
       </Tabs>
+
+      {/* Always keep a printable source mounted for html2pdf */}
+      <div className="fixed -left-[9999px] top-0 pointer-events-none opacity-0">
+        <div id="resume-pdf" ref={pdfRef}>
+          <MDEditor.Markdown
+            source={previewContent}
+            style={{
+              background: "white",
+              color: "black",
+              width: "794px",
+              minHeight: "1123px",
+              padding: "24px",
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
